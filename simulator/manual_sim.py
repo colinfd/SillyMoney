@@ -137,13 +137,15 @@ class Broker():
             purchase_dates = np.array([i[1] for i in self.purchases])
             #mean_daily_percent = np.mean((sell_price - purchase_prices)/purchase_prices/(self.day_index-self.start_index-purchase_dates))*100 #mean assuming all independent trades, more relevant for a pure algorithm
             mean_daily_percent = (sell_price - purchase_prices.mean())/purchase_prices.mean()/len(purchase_prices)*100 #mean over the current stock
-            self.mean_daily_percents.append(mean_daily_percent)
+            self.mean_daily_percents.append((mean_daily_percent,self.day_index-self.start_index-purchase_dates[0]))
+            total_days = sum([i[1] for i in self.mean_daily_percents])
+            total_mean = sum([i[0]*i[1]/total_days for i in self.mean_daily_percents])
             
             print "="*15
             print "Sold %d shares of %s for $%.2f/share"%(len(self.purchases),self.stock_sym,sell_price)
             print "Mean daily percentage return = %.2f%%/day"%mean_daily_percent
             print "="*15
-            print "Current Session: Averaging %.2f%%/day on %d stocks\n"%(np.mean(self.mean_daily_percents),len(self.mean_daily_percents))
+            print "Current Session: Averaging %.2f%%/day on %d stocks over %d total days\n"%(total_mean,len(self.mean_daily_percents),total_days)
             
         #Start new stock
         self.new_stock()
