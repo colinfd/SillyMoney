@@ -10,7 +10,7 @@ def val(stock_name):
     Take the name of a stock and return a scalar that is used to evaluate its investment value.
     sim.read_stock(stock_name) returns stock data up to the current day
     """
-    prices = sim.read_stock(stock_name,prev_day=True,pt='close')
+    prices = sim.read_stock(stock_name,pt='close',prev_day=True)
     diff = [prices[-2] - prices[-3], prices[-1] - prices[-2]]
     if diff[1] < 0 and diff[1] > diff[0]:
         return (diff[1] - diff[0])/prices[-1]
@@ -45,12 +45,15 @@ def buy(val_dict,cash,market_prices):
     """
     buy_dict = {}
 
-    n = 5
+    n = n_buy
     vals = [(stock_name,val_dict[stock_name]) for stock_name in val_dict]
     vals = sorted(vals,key = lambda x : x[1],reverse=True)
     
     for i in range(n):
-        buy_dict[vals[i][0]] = int(cash/n/market_prices[vals[i][0]])
+        try:
+            buy_dict[vals[i][0]] = int(cash/n/market_prices[vals[i][0]])
+        except:
+            print vals[i],market_prices[vals[i][0]]
     
     return buy_dict
 
@@ -58,7 +61,9 @@ def buy(val_dict,cash,market_prices):
 ##############################################i
 #RUN SIMULATOR
 ##############################################
-exclude_list = 
-sim = Simulator(250,1e4,val,buy,sell) #simulation length in days, starting cash
+exclude_list = ['FPAY','FNCX','CIDM']
+n_buy = 5
+
+sim = Simulator(250,1e4,val,buy,sell,buy_pt='open',sell_pt='open',exclude_list=exclude_list,daily_limit=10/n_buy) #simulation length in days, starting cash
 while True:
     sim.run()

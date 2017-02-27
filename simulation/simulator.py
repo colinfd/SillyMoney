@@ -27,8 +27,10 @@ class Simulator():
         if data_path is None:
             self.data_path = '/home/colinfd/silly_money/data/'
         else:
+            if data_path[-1] != '/':
+                data_path += '/'
             self.data_path = data_path
-        
+
         self.stock_names = []
         for stock_pkl in glob.glob(self.data_path + '*.pkl'):
             stock_name = stock_pkl.split('/')[-1][:-4]
@@ -90,7 +92,7 @@ class Simulator():
             for stock_name in buy_dict:
                 self.held_stocks[stock_name] += buy_dict[stock_name]
                 self.cash -= buy_dict[stock_name]*self.buy_market_prices[stock_name]
-                assert self.cash > 0, "Bad buy_fun ... NEGATIVE CASH!"
+                assert self.cash >= 0, "Bad buy_fun ... NEGATIVE CASH!"
 
             log += "Sales: %s\n"%self.stock_string(sell_dict,self.sell_pt)
             log += "Purchases: %s\n\n"%self.stock_string(buy_dict,self.buy_pt)
@@ -134,7 +136,7 @@ class Simulator():
         total = sum([self.market_price(stock_name,self.sell_pt)*held_stocks[stock_name] for stock_name in held_stocks if held_stocks[stock_name] > 0]) 
         return total
 
-    def read_stock(self,stock_name,start_i=0,end_i=None,pt='open',prev_day=False):
+    def read_stock(self,stock_name,start_i=0,end_i='last',pt='open',prev_day=False):
         """
         Return numpy array of slice of stock_data from start_i to end_i
         pt = 'open', 'close', 'high', 'low', 'volume'
@@ -147,7 +149,10 @@ class Simulator():
                 f = open(self.data_path + stock + '.pkl')
                 stock_dict = pickle.load(f)
                 f.close()
-                self.stock_data[pt][stock] = np.zeros(len(self.dates),dtype=np.float16)
+                if pt == 'volume':
+                    self.stock_data[pt][stock] = np.zeros(len(self.dates),dtype=np.float32)
+                else:
+                    self.stock_data[pt][stock] = np.zeros(len(self.dates),dtype=np.float16)
                 for d in range(len(self.dates)):
                     price = stock_dict['data'][d][pt_dict[pt]]
                     if price == 'N/A' or price == 'nan':
@@ -155,9 +160,10 @@ class Simulator():
                     else:
                         self.stock_data[pt][stock][d] = price
         
-        if end_i == None:
-            end_i = self.day_ind + 1
-        if prev_day:
-            end_i -= 1
-
+        if end_i is not None:
+            if end_i == 'last':
+                end_i = self.day_ind + 1
+            if prev_day:
+                end_i -= 1
+        
         return self.stock_data[pt][stock_name][start_i:end_i]
