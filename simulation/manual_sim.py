@@ -5,31 +5,48 @@ import glob
 import random
 import numpy as np
 
-#TO-DO:
-#Add % to secondary y-axis
-#Create interface for displaying/plotting user-defined functions/values from a stock's history.
-#
-
-stock_pkls = glob.glob('../data/*.pkl')
-random.shuffle(stock_pkls)
-
-ex_stock = pickle.load(open('../examples/A.pkl'))
-dates = ex_stock.index.values
-n_dates = 250
-pt = 0 #open, close, high, low, volume
-
 class Broker():
-    def __init__(self,scalar_analyses=[],vector_analyses=[]):
-        self.stock_ctr = 0 #number of stocks seen this session
-        self.mean_daily_percents = [] #percentage gains on each stock seen this session
+    def __init__(self,price_type='open',n_dates=250,scalar_analyses=[],vector_analyses=[]):
+        """
+        Broker class that keeps track of stock prices and purchases and updates the active window.
 
-        self.fig, self.ax = plt.subplots() #figure used for plotting stock info
-        self.plot = self.ax.plot(ex_stock.index.values,ex_stock['Open'],'-b.',linewidth=1.,markersize=3)[0]
-        self.purchase_plot = self.ax.plot(np.nan,np.nan,'ro',markersize=6)[0]
+        price_type: one of 'open','close','high','low'
+            value of stock to consider on each day
 
+        n_dates: number of previous trading days shown to user
+
+        scalar_analyses: list of functions of the type vector --> scalar
+            every trading day, each function will be evaluated with the up-to-date stock data and
+            the result is printed to the user
+
+        vector_analyses: list of functions of the type vector --> vector
+            every trading day, each function will be evaluated with the up-to-date stock data and
+            the result is overlayed on the stock data
+
+        """
+        if price_type not in ['open','close','high','low']:
+            raise InputError("price_type must be one of 'open','close','high','low'")
+        else:
+            self.pt = {'open':0, 'close':1, 'high':2, 'low':3}[price_type]
+
+        self.n_dates = n_dates
         self.scalar_analyses = scalar_analyses #list of scalar functions to analyze on each day with each stock, use self.attach_scalar_analysis()
         self.vector_analyses = vector_analyses
         
+        self.stock_ctr = 0 #number of stocks seen this session
+        self.dates = range(1771) #list of all trading days
+        self.mean_daily_percents = [] #percentage gains on each stock seen this session
+
+        self.stock_csvs = glob.glob('../data/*.csv')
+        random.shuffle(self.stock_csvs)
+        
+        #Initialize interactive window with stock data
+        self.fig, self.ax = plt.subplots() #figure used for plotting stock info
+        self.ax2 = self.ax.twinx()
+        self.plot = self.ax.plot([0,1],[0,1])[0]#Line2D object corresponding to stock price
+        self.purchase_plot = self.ax.plot(np.nan,np.nan,'ro',markersize=6)[0]#Line2D object corresponding to purchases
+        self.purchase_mean_plot = self.ax.plot(np.nan,np.nan,'--r',lw=1)[0]#Line2D object corresponding to purchase mean
+
         self.analyses_plots = []
         for vector_analysis in vector_analyses:
             self.analyses_plots.append(self.ax.plot(np.nan,np.nan,'-k',linewidth=1.5)[0])
@@ -50,36 +67,71 @@ class Broker():
 
     def new_stock(self):
         #Pick a new stock at random
-        f = open(stock_pkls[self.stock_ctr])
+        fname = self.stock_csvs[self.stock_ctr]
+        """
+        f = open(fname)
         self.stock = pickle.load(f)
         f.close()
         self.stock_sym = self.stock['meta']['sym']
         self.stock_name = self.stock['meta']['name']
         self.stock = self.stock['data'] #list of lists containing open, close, high, low for each market day
+        """
+        self.stock, self.stock_meta = self.load_stock(fname)
 
         self.purchases = [] #to be populated with [purchase price, purchase date (relative to self.start_index)]
 
         #Pick a start date at random
-        self.start_index = random.randint(0,len(dates)-n_dates-100) #allow for at least 100 days of trading
-        self.day_index = self.start_index + n_dates #index of current day
+        self.start_index = random.randint(0,len(self.dates)-self.n_dates-100) #allow for at least 100 days of trading
+        self.day_index = self.start_index + self.n_dates #index of current day
 
         self.stock_ctr += 1
         self.advance() #makes sure that stock has data on first day
         self.ax.set_autoscale_on(True)
         self.draw() #update chart
     
+    def load_stock(self,fname):
+        f = open(fname)
+        lines = f.readlines()
+        f.close()
+        meta = lines[0].strip().split(',')
+        meta = {'sym':meta[0],'name':meta[1],'exchange':meta[2]}
+
+        data = []
+
+        for i in range(1,len(lines)):
+            data += [lines[i].strip().split(',')]
+
+        #data = np.loadtxt(fname,skiprows=1,delimiter=',')#,converters={'N/A':np.nan})
+
+        return data,meta
+
+
+
     def draw(self):
         #Update x and y data for stocks
         self.plot.set_xdata(range(self.day_index-self.start_index+1))
-        ydata = [i[pt] for i in self.stock[self.start_index:self.day_index+1]]
+        ydata = [i[self.pt] for i in self.stock[self.start_index:self.day_index+1]]
         for i,dat in enumerate(ydata):
             if dat == 'N/A':
                 ydata[i] = np.nan
             else:
                 ydata[i] = float(ydata[i])
         self.plot.set_ydata(ydata)
-        #self.ax2.set_yticks((np.array(self.ax.get_yticks())/self.ax.get_yticks()[0] - 1)*100)
-        
+        self.ax.relim()
+        self.ax.autoscale_view()
+
+        #update 2nd y-axis which shows percentage change relative stock price
+        self.ax2.set_ylim(np.array(self.ax.get_ylim())/ydata[-1]*100-100)
+        labels = []
+        for tick in self.ax2.get_yticks():
+            label = str(tick)
+            if tick >= 0:
+                label = '+' + label
+            label += '%'
+            labels.append(label)
+        self.ax2.set_yticklabels(labels)
+
+
         #Run scalar analyses and add to title
         title = ""
         for fun in self.scalar_analyses:
@@ -93,19 +145,26 @@ class Broker():
             
         
         #Update position of purchases
-        self.purchase_plot.set_xdata([i[1] for i in self.purchases])
-        self.purchase_plot.set_ydata([i[0] for i in self.purchases])
+        if len(self.purchases) > 0:
+            purch_prices,purch_days = zip(*self.purchases)
+            self.purchase_plot.set_xdata(purch_days)
+            self.purchase_plot.set_ydata(purch_prices)
 
-        self.ax.relim()
-        self.ax.autoscale_view()
-        
+            #Update average purchase price
+            if len(self.purchases) > 0:
+                pmp = self.purchase_mean_plot
+                xlim = pmp.axes.get_xlim()
+                pmp.set_xdata(xlim)
+                pmp.set_ydata([np.mean(purch_prices)]*2)
+
+                
         if self.stock_ctr == 1: #first stock
             plt.show()
 
     def advance(self,*args):
         #advance to next day with stock data available
         self.day_index += 1
-        if self.stock[self.day_index][pt] == 'N/A':
+        if self.stock[self.day_index][self.pt] == 'N/A':
             if self.day_index < len(self.stock):
                 try:
                     self.advance()
@@ -119,18 +178,18 @@ class Broker():
     def buy(self,event):
         #purchase stock on current day
 
-        price = float(self.stock[self.day_index][pt])
+        price = float(self.stock[self.day_index][self.pt])
         day = self.day_index - self.start_index
         self.purchases.append([price,day])
 
-        print "Bought stock in %s for %.2f"%(self.stock_sym,price)
+        print "Bought stock in %s for %.2f"%(self.stock_meta['sym'],price)
 
         self.advance() #only allow one purchase per day
         
     def sell(self,event):
         #Record profits and investment duration
         if len(self.purchases) > 0:
-            sell_price = float(self.stock[self.day_index][pt])
+            sell_price = float(self.stock[self.day_index][self.pt])
             
             #calculate return on investment
             purchase_prices = np.array([i[0] for i in self.purchases])
@@ -142,7 +201,7 @@ class Broker():
             total_mean = sum([i[0]*i[1]/total_days for i in self.mean_daily_percents])
             
             print "="*15
-            print "Sold %d shares of %s for $%.2f/share"%(len(self.purchases),self.stock_sym,sell_price)
+            print "Sold %d shares of %s for $%.2f/share"%(len(self.purchases),self.stock_meta['sym'],sell_price)
             print "Mean daily percentage return = %.2f%%/day"%mean_daily_percent
             print "="*15
             print "Current Session: Averaging %.2f%%/day on %d stocks over %d total days\n"%(total_mean,len(self.mean_daily_percents),total_days)
@@ -216,4 +275,5 @@ def running_mean(prices,n=3):
     return out
 
 
-b = Broker(scalar_analyses = [rms_disp],vector_analyses = [running_mean])
+b = Broker(scalar_analyses = [rms_disp])
+#b = Broker(scalar_analyses = [rms_disp],vector_analyses = [running_mean])
