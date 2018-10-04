@@ -1,2 +1,0 @@
-I think the only difference between . and .. is that log should be printing open prices in . and closing price in ../
-The run_sim.py used in ../ is deprecated.
