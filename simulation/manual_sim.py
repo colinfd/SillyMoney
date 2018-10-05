@@ -33,7 +33,7 @@ class Broker():
         self.vector_analyses = vector_analyses
         
         self.stock_ctr = 0 #number of stocks seen this session
-        self.dates = range(1771) #list of all trading days
+        self.dates = list(range(1771)) #list of all trading days
         self.mean_daily_percents = [] #percentage gains on each stock seen this session
 
         self.stock_csvs = glob.glob('../data/*.csv')
@@ -121,7 +121,7 @@ class Broker():
         Update Line2D objects in figure window.
         """
         #Update x and y data for stocks
-        self.plot.set_xdata(range(self.day_index-self.start_index+1))
+        self.plot.set_xdata(list(range(self.day_index-self.start_index+1)))
         ydata = [i[self.pt] for i in self.stock[self.start_index:self.day_index+1]]
         for i,dat in enumerate(ydata):
             if dat == 'N/A':
@@ -151,12 +151,12 @@ class Broker():
 
         #Run vector analyses and add to plot
         for i,fun in enumerate(self.vector_analyses):
-            self.analyses_plots[i].set_xdata(range(self.day_index-self.start_index+1))
+            self.analyses_plots[i].set_xdata(list(range(self.day_index-self.start_index+1)))
             self.analyses_plots[i].set_ydata(fun(ydata))
             
         #Update position of purchases
         if len(self.purchases) > 0:
-            purch_prices,purch_days = zip(*self.purchases)
+            purch_prices,purch_days = list(zip(*self.purchases))
             mean = np.mean(purch_prices)
         else:
             purch_prices = []
@@ -217,7 +217,7 @@ class Broker():
         day = self.day_index - self.start_index
         self.purchases.append([price,day])
 
-        print "Bought stock in %s for %.2f"%(self.stock_meta['sym'],price)
+        print("Bought stock in %s for %.2f"%(self.stock_meta['sym'],price))
 
         self.advance() #only allow one purchase per day
     
@@ -238,14 +238,14 @@ class Broker():
             total_days = sum([i[1] for i in self.mean_daily_percents])
             total_mean = sum([i[0]*i[1]/total_days for i in self.mean_daily_percents])
             
-            print "="*15
-            print "Sold %d shares of %s for $%.2f/share"%(len(self.purchases),self.stock_meta['sym'],sell_price)
-            print "Mean daily percentage return = %.2f%%/day over %d days"\
-                    %(mean_daily_percent,self.mean_daily_percents[-1][1])
-            print "="*15
-            print "Current Session: Averaging %.2f%%/day on %d stocks over %d total days\n"\
-                    %(total_mean,len(self.mean_daily_percents),total_days)
-            print "That's %.2f times a 7%% annual interest rate.\n"%(total_mean/(7/250.))
+            print("="*15)
+            print("Sold %d shares of %s for $%.2f/share"%(len(self.purchases),self.stock_meta['sym'],sell_price))
+            print("Mean daily percentage return = %.2f%%/day over %d days"\
+                    %(mean_daily_percent,self.mean_daily_percents[-1][1]))
+            print("="*15)
+            print("Current Session: Averaging %.2f%%/day on %d stocks over %d total days\n"\
+                    %(total_mean,len(self.mean_daily_percents),total_days))
+            print("That's %.2f times a 7%% annual interest rate.\n"%(total_mean/(7/250.)))
             
         #Start new stock
         self.new_stock()
@@ -256,7 +256,7 @@ class Broker():
         """
         plt.close('all')
         
-        fname = raw_input("\nIf you would like to save your daily percentage returns, provide filename now:\n")
+        fname = input("\nIf you would like to save your daily percentage returns, provide filename now:\n")
         
         s = ''
         for m in self.mean_daily_percents:
