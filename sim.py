@@ -36,7 +36,7 @@ class Broker():
         self.dates = list(range(1771)) #list of all trading days
         self.mean_daily_percents = [] #percentage gains on each stock seen this session
 
-        self.stock_csvs = glob.glob('../data/*.csv')
+        self.stock_csvs = glob.glob('data/*.csv')
         random.shuffle(self.stock_csvs)
         
         #Initialize interactive window with stock data
@@ -341,6 +341,7 @@ def running_mean(prices,n=3):
 
     return out
 
-b = Broker()
-#b = Broker(scalar_analyses = [rms_disp])
-#b = Broker(scalar_analyses = [rms_disp],vector_analyses = [running_mean])
+if __name__=="__main__":
+    b = Broker()
+    #b = Broker(scalar_analyses = [rms_disp])
+    #b = Broker(scalar_analyses = [rms_disp],vector_analyses = [running_mean])
