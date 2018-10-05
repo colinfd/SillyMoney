@@ -40,13 +40,16 @@ class Broker():
         random.shuffle(self.stock_csvs)
         
         #Initialize interactive window with stock data
-        self.fig, self.ax = plt.subplots() #figure used for plotting stock info
-        self.figb, self.axb = plt.subplots(figsize=(3,3)) #figure used for buttons
-        self.ax2 = self.ax.twinx()
-        self.plot = self.ax.plot([0,1],[0,1])[0]#Line2D object corresponding to stock price
+        #self.fig, self.ax = plt.subplots(figsize=(12,10)) #figure used for plotting stock info
+        self.fig, self.ax = plt.subplots(figsize=(6.4,4.8),dpi=250) #figure used for plotting stock info
+        self.figb, self.axb = plt.subplots(figsize=(3,3),dpi=100) #figure used for buttons
+        self.ax2 = self.ax.twinx() #second y-axis used to plot relative stock price
+        self.plot = self.ax.plot([0,1],[0,1],linewidth=1.5)[0]#Line2D object corresponding to stock price
         self.purchase_plot = self.ax.plot(np.nan,np.nan,'r.',markersize=6)[0]#Line2D object corresponding to purchases
-        self.purchase_mean_plot = self.ax.plot(np.nan,np.nan,'--r',lw=1)[0]#Line2D object corresponding to purchase mean
-        self.purchase_mean_text = self.ax.text(np.nan,np.nan,'',color='red',fontsize=12)
+        self.purchase_mean_plot = self.ax.plot(np.nan,np.nan,'--r',lw=1.5)[0]#Line2D object corresponding to purchase mean
+        self.purchase_mean_text = self.ax.text(np.nan,np.nan,'',color='red',fontsize=8)
+        self.ax.set_xlabel('Time (days)')
+        self.ax.set_ylabel('Stock Price ($)')
 
         self.analyses_plots = []
         for vector_analysis in vector_analyses:
@@ -130,13 +133,17 @@ class Broker():
                 ydata[i] = float(ydata[i])
         self.plot.set_ydata(ydata)
         self.ax.relim()
-        self.ax.autoscale_view()
+        #need to readjust data limits here so that they don't get confused by the pmp line.
+        self.ax.dataLim.x0 = 0
+        self.ax.dataLim.x1 = self.day_index-self.start_index
+        self.ax.autoscale_view(scalex=False)
+        self.ax.set_xlim([0,(self.day_index-self.start_index)*1.1])
 
         #update 2nd y-axis which shows percentage change relative stock price
         self.ax2.set_ylim(np.array(self.ax.get_ylim())/ydata[-1]*100-100)
         labels = []
         for tick in self.ax2.get_yticks():
-            label = str(tick)
+            label = str(int(tick))
             if tick >= 0:
                 label = '+' + label
             label += '%'
@@ -176,7 +183,7 @@ class Broker():
             pmt.set_text('%.2f%%'%((ydata[-1]/mean-1)/len(self.purchases)*100))
             dx = xlim[1] - xlim[0]
             dy = ylim[1] - ylim[0]
-            pmt.set_position((0.9*dx + xlim[0],mean+0.01*dy))
+            pmt.set_position((0.92*dx + xlim[0],mean+0.01*dy))
         else:
             pmt.set_text('')
 
@@ -243,7 +250,7 @@ class Broker():
             print("Mean daily percentage return = %.2f%%/day over %d days"\
                     %(mean_daily_percent,self.mean_daily_percents[-1][1]))
             print("="*15)
-            print("Current Session: Averaging %.2f%%/day on %d stocks over %d total days\n"\
+            print("Current Session: Averaging %.2f%%/day on %d stocks over %d total days."\
                     %(total_mean,len(self.mean_daily_percents),total_days))
             print("That's %.2f times a 7%% annual interest rate.\n"%(total_mean/(7/250.)))
             
