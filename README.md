@@ -11,7 +11,7 @@ The user is encouraged to develop a strategy that allows them to maintain a high
 
 
 ## Setup
-Prerequisites:  
+Dependencies:  
 Python 3  
 Numpy  
 Matplotlib  
