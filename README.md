@@ -16,5 +16,8 @@ Python 3
 Numpy  
 Matplotlib  
 
+Untar stock data in data.tar.  
+`tar -xvf data.tar`
+
 The simulation is managed by `Broker` as defined in `sim.py` and running the simulator is as simple as `python sim.py`.
 There are some adjustable parameters as described in `Broker`, and the user may also experiment with passing scalar or vector analysis functions to `Broker` as explained in the documentation.
