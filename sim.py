@@ -37,10 +37,11 @@ class Broker():
         self.mean_daily_percents = [] #percentage gains on each stock seen this session
 
         self.stock_csvs = glob.glob('data/*.csv')
+        if len(self.stock_csvs) == 0:
+            raise Exception('Stock data not found, please untar data.tar.')
         random.shuffle(self.stock_csvs)
         
         #Initialize interactive window with stock data
-        #self.fig, self.ax = plt.subplots(figsize=(12,10)) #figure used for plotting stock info
         self.fig, self.ax = plt.subplots(figsize=(6.4,4.8),dpi=250) #figure used for plotting stock info
         self.figb, self.axb = plt.subplots(figsize=(3,3),dpi=100) #figure used for buttons
         self.ax2 = self.ax.twinx() #second y-axis used to plot relative stock price
@@ -239,7 +240,7 @@ class Broker():
             #calculate return on investment
             purchase_prices = np.array([i[0] for i in self.purchases])
             purchase_dates = np.array([i[1] for i in self.purchases])
-            mean_daily_percent = (sell_price - purchase_prices.mean())/purchase_prices.mean()/len(purchase_prices)*100 #mean over the current stock
+            mean_daily_percent = (sell_price - purchase_prices.mean())/purchase_prices.mean()/len(purchase_prices)*100
             investment_length = self.day_index-self.start_index-purchase_dates[0]
             self.mean_daily_percents.append((mean_daily_percent,investment_length))
             total_days = sum([i[1] for i in self.mean_daily_percents])
